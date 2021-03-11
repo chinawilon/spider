@@ -9,10 +9,10 @@ type Request struct {
 	Header map[string]string `json:"header"`
 	Body []byte `json:"body"`
 	Timeout time.Duration `json:"timeout"`
-	Response `json:"response"`
 }
 
 type Response struct {
+	UID string `json:"uid"`
 	StatusCode int `json:"status_code"`
 	Error error `json:"error"`
 	Body []byte `json:"body"`

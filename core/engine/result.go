@@ -1,21 +1,23 @@
 package engine
 
-type RequestChan chan *Request
+import "log"
+
+type RequestChan chan *Response
 
 var Result = make(RequestChan, 10000)
 
-func (r RequestChan) Push(request *Request)  {
+func (r RequestChan) Push(response *Response)  {
 	for {
 		select {
-		case r <- request:
+		case r <- response:
 			return
 		default:
-			<- r // if block remove the oldest one
+			log.Printf("remove oldest one: %v", <-r)
 		}
 	}
 }
 
-func (r RequestChan) Pop() *Request {
+func (r RequestChan) Pop() *Response {
 	return <- r
 }
 

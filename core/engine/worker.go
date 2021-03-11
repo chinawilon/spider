@@ -3,7 +3,6 @@ package engine
 import (
 	"bytes"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
@@ -15,15 +14,18 @@ func Worker(r Request){
 
 	<- rateLimiter
 
+	rp := &Response{
+		UID: r.UID,
+	}
+
 	client := http.Client{
 		Timeout: r.Timeout * time.Second,
 	}
 
 	request, err := http.NewRequest(r.Method, r.Uri, bytes.NewReader(r.Body))
 	if err != nil {
-		log.Printf("new request err : %v", err)
-		r.Response.Error = err
-		Result.Push(&r)
+		rp.Error = err
+		Result.Push(rp)
 		return
 	}
 
@@ -34,21 +36,20 @@ func Worker(r Request){
 
 	response, err := client.Do(request)
 	if err != nil {
-		log.Printf("client do request err : %v", err)
-		r.Response.Error = err
-		Result.Push(&r)
+		rp.Error = err
+		Result.Push(rp)
 		return
 	}
 
 	if response.Body != nil {
 		defer response.Body.Close()
 		body, _ := ioutil.ReadAll(response.Body)
-		r.Response.Body = body
-		r.Response.StatusCode = response.StatusCode
-		Result.Push(&r)
+		rp.Body = body
+		rp.StatusCode = response.StatusCode
+		Result.Push(rp)
 		return
 	}
 
 	// other side
-	Result.Push(&r)
+	Result.Push(rp)
 }
