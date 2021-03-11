@@ -18,8 +18,11 @@ type Response struct {
 	Body []byte `json:"body"`
 }
 
-
-type Processor func(*Request)
+type Processor interface {
+	Pop() *Response
+	Push(*Response)
+	Work(*Request)
+}
 
 type Scheduler interface {
 	ReadyNotifier

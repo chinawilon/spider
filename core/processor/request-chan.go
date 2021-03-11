@@ -1,16 +1,17 @@
-package engine
+package processor
 
 import (
 	"bytes"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"spider/core/engine"
 	"time"
 )
 
-type RequestChan chan *Response
+type RequestChan chan *engine.Response
 
-func (rc RequestChan) Push(response *Response)  {
+func (rc RequestChan) Push(response *engine.Response)  {
 	for {
 		select {
 		case rc <- response:
@@ -21,17 +22,17 @@ func (rc RequestChan) Push(response *Response)  {
 	}
 }
 
-func (rc RequestChan) Pop() *Response {
+func (rc RequestChan) Pop() *engine.Response {
 	return <- rc
 }
 
 
-func (rc RequestChan) Worker(r *Request){
+func (rc RequestChan) Work(r *engine.Request){
 
 	// Prevent having too many files open at the same time
 	<- time.Tick(1 * time.Millisecond)
 
-	rp := &Response{
+	rp := &engine.Response{
 		UID: r.UID,
 	}
 
@@ -70,3 +71,4 @@ func (rc RequestChan) Worker(r *Request){
 	// other side
 	rc.Push(rp)
 }
+

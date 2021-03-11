@@ -1,9 +1,9 @@
 package engine
 
 type Engine struct {
-	Scheduler Scheduler
-	WorkerCount int
-	RequestProcess Processor
+	Scheduler      Scheduler
+	WorkerCount    int
+	Processor      Processor
 }
 
 func (e *Engine) Run()  {
@@ -18,7 +18,7 @@ func (e *Engine) createWorker(in chan Request, ready ReadyNotifier)  {
 		for {
 			ready.WorkerReady(in)
 			request := <- in
-			e.RequestProcess(&request)
+			e.Processor.Work(&request)
 		}
 	}()
 }

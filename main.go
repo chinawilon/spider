@@ -10,21 +10,20 @@ import (
 	"net"
 	"runtime"
 	"spider/core/engine"
+	"spider/core/processor"
 	"spider/core/scheduler"
 	"strings"
 	"unsafe"
 )
 
-// request chan
-var rc = make(engine.RequestChan, 100000)
-
 func main()  {
 
-	// default spider engine
+	// spider engine
+	proc := make(processor.RequestChan, 10000)
 	var e = &engine.Engine{
 		Scheduler: &scheduler.QueuedScheduler{},
 		WorkerCount: 10000,
-		RequestProcess: rc.Worker,
+		Processor: proc,
 	}
 	e.Run()
 
@@ -70,7 +69,7 @@ func handle(conn net.Conn, e *engine.Engine)  {
 	case "PUB":
 		pub(reader, writer, conn, e)
 	case "SUB":
-		sub(writer, conn)
+		sub(writer, conn, e)
 	default:
 		shutdown(writer, conn)
 	}
@@ -119,9 +118,9 @@ func pub(reader *bufio.Reader, writer *bufio.Writer, conn net.Conn, e *engine.En
 	}
 }
 
-func sub(writer *bufio.Writer, conn net.Conn)  {
+func sub(writer *bufio.Writer, conn net.Conn, e *engine.Engine)  {
 	for {
-		r := rc.Pop()
+		r := e.Processor.Pop()
 		ret, err := json.Marshal(r)
 		if err != nil {
 			log.Printf("marshal err(%s) - %v", conn.RemoteAddr(), err)
@@ -132,7 +131,7 @@ func sub(writer *bufio.Writer, conn net.Conn)  {
 		_ = writer.Flush()
 		if err != nil {
 			log.Printf("SUB write conn err(%s) - %s", conn.RemoteAddr(), err)
-			rc.Push(r)
+			e.Processor.Push(r)
 			_ = conn.Close()
 			return
 		}
