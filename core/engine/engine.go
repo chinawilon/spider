@@ -18,7 +18,7 @@ func (e *Engine) createWorker(in chan Request, ready ReadyNotifier)  {
 		for {
 			ready.WorkerReady(in)
 			request := <- in
-			e.RequestProcess(request)
+			e.RequestProcess(&request)
 		}
 	}()
 }

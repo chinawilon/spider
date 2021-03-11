@@ -19,7 +19,7 @@ type Response struct {
 }
 
 
-type Processor func(Request)
+type Processor func(*Request)
 
 type Scheduler interface {
 	ReadyNotifier

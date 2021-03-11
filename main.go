@@ -15,13 +15,16 @@ import (
 	"unsafe"
 )
 
+// request chan
+var rc = make(engine.RequestChan, 100000)
+
 func main()  {
 
 	// default spider engine
 	var e = &engine.Engine{
 		Scheduler: &scheduler.QueuedScheduler{},
 		WorkerCount: 10000,
-		RequestProcess: engine.Worker,
+		RequestProcess: rc.Worker,
 	}
 	e.Run()
 
@@ -118,7 +121,7 @@ func pub(reader *bufio.Reader, writer *bufio.Writer, conn net.Conn, e *engine.En
 
 func sub(writer *bufio.Writer, conn net.Conn)  {
 	for {
-		r := engine.Result.Pop()
+		r := rc.Pop()
 		ret, err := json.Marshal(r)
 		if err != nil {
 			log.Printf("marshal err(%s) - %v", conn.RemoteAddr(), err)
@@ -129,7 +132,7 @@ func sub(writer *bufio.Writer, conn net.Conn)  {
 		_ = writer.Flush()
 		if err != nil {
 			log.Printf("SUB write conn err(%s) - %s", conn.RemoteAddr(), err)
-			engine.Result.Push(r)
+			rc.Push(r)
 			_ = conn.Close()
 			return
 		}
