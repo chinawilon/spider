@@ -19,9 +19,9 @@ type Response struct {
 }
 
 type Processor interface {
-	Pop() *Response
-	Push(*Response)
-	Work(*Request)
+	Pop() Response
+	Push(Response)
+	Work(Request)
 }
 
 type Scheduler interface {

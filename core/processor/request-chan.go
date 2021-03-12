@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-type RequestChan chan *engine.Response
+type RequestChan chan engine.Response
 
-func (rc RequestChan) Push(response *engine.Response)  {
+func (rc RequestChan) Push(response engine.Response)  {
 	for {
 		select {
 		case rc <- response:
@@ -21,17 +21,18 @@ func (rc RequestChan) Push(response *engine.Response)  {
 	}
 }
 
-func (rc RequestChan) Pop() *engine.Response {
+func (rc RequestChan) Pop() engine.Response {
 	return <- rc
 }
 
+// Prevent having too many files open at the same time
+var rateLimited = time.Tick(1 * time.Millisecond)
 
-func (rc RequestChan) Work(r *engine.Request){
+func (rc RequestChan) Work(r engine.Request){
 
-	// Prevent having too many files open at the same time
-	<- time.Tick(1 * time.Millisecond)
+	<- rateLimited
 
-	rp := &engine.Response{
+	rp := engine.Response{
 		UID: r.UID,
 	}
 
@@ -52,22 +53,19 @@ func (rc RequestChan) Work(r *engine.Request){
 	}
 
 	response, err := client.Do(request)
+	if response != nil {
+		defer response.Body.Close()
+	}
+
 	if err != nil {
 		rp.Error = err
 		rc.Push(rp)
 		return
 	}
 
-	if response.Body != nil {
-		defer response.Body.Close()
-		body, _ := ioutil.ReadAll(response.Body)
-		rp.Body = body
-		rp.StatusCode = response.StatusCode
-		rc.Push(rp)
-		return
-	}
-
-	// other side
+	body, _ := ioutil.ReadAll(response.Body)
+	rp.Body = body
+	rp.StatusCode = response.StatusCode
 	rc.Push(rp)
 }
 

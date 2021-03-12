@@ -8,9 +8,10 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
-	"runtime/pprof"
 	"spider/core/engine"
 	"spider/core/processor"
 	"spider/core/scheduler"
@@ -19,30 +20,17 @@ import (
 
 func main()  {
 
-
-	f1, err := os.Create("cpu.prof")
-	if err != nil {
-		log.Fatal("could not create CPU profile: ", err)
-	}
-	defer f1.Close() // 该例子中暂忽略错误处理
-	if err := pprof.StartCPUProfile(f1); err != nil {
-		log.Fatal("could not start CPU profile: ", err)
-	}
-	defer pprof.StopCPUProfile()
-
-
-	f2, err := os.Create("mem.prof")
-	if err != nil {
-		log.Fatal("could not create memory profile: ", err)
-	}
-	defer f2.Close()
-	if err := pprof.WriteHeapProfile(f2); err != nil {
-		log.Fatal("could not write memory profile: ", err)
-	}
-
+	// profiling
+	go func() {
+		ip := "0.0.0.0:6060"
+		if err := http.ListenAndServe(ip, nil); err != nil {
+			fmt.Printf("start pprof failed on %s\n", ip)
+			os.Exit(1)
+		}
+	}()
 
 	// spider engine
-	proc := make(processor.RequestChan, 100)
+	proc := make(processor.RequestChan, 10000)
 	var e = &engine.Engine{
 		Scheduler: &scheduler.QueuedScheduler{},
 		WorkerCount: 10000,
@@ -80,8 +68,8 @@ func handle(conn net.Conn, e *engine.Engine)  {
 	writer := bufio.NewWriterSize(conn, defaultBufferSize)
 
 	typ := make([]byte, 3)
-	n, err := reader.Read(typ)
-	if n != 3 || err != nil {
+	_, err := reader.Read(typ)
+	if err != nil {
 		_, _ = writer.WriteString("Forbidden.")
 		_ = writer.Flush()
 		_ = conn.Close()
@@ -107,15 +95,15 @@ func shutdown(writer *bufio.Writer, conn net.Conn)  {
 func pub(reader *bufio.Reader, writer *bufio.Writer, conn net.Conn, e *engine.Engine) {
 	for {
 		length := make([]byte, 2)
-		n, err := reader.Read(length)
-		if n != 2 || err != nil {
+		_, err := reader.Read(length)
+		if err != nil {
 			log.Printf("read conn err(%s) - %s", conn.RemoteAddr(), err)
 			shutdown(writer, conn)
 			return
 		}
 		dataLen := binary.BigEndian.Uint16(length)
 		data := make([]byte, dataLen)
-		n, err = reader.Read(data)
+		n, err := reader.Read(data)
 		if err != nil || n != int(dataLen) {
 			log.Printf("payload length(%d) expect(%d)", n, dataLen)
 			shutdown(writer, conn)
