@@ -3,7 +3,6 @@ package processor
 import (
 	"bytes"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"spider/core/engine"
 	"time"
@@ -17,7 +16,7 @@ func (rc RequestChan) Push(response *engine.Response)  {
 		case rc <- response:
 			return
 		default:
-			log.Printf("remove oldest one: %v", <-rc)
+			_ = <-rc
 		}
 	}
 }

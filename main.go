@@ -8,18 +8,41 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"log"
 	"net"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"spider/core/engine"
 	"spider/core/processor"
 	"spider/core/scheduler"
 	"strings"
-	"unsafe"
 )
 
 func main()  {
 
+
+	f1, err := os.Create("cpu.prof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer f1.Close() // 该例子中暂忽略错误处理
+	if err := pprof.StartCPUProfile(f1); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
+
+
+	f2, err := os.Create("mem.prof")
+	if err != nil {
+		log.Fatal("could not create memory profile: ", err)
+	}
+	defer f2.Close()
+	if err := pprof.WriteHeapProfile(f2); err != nil {
+		log.Fatal("could not write memory profile: ", err)
+	}
+
+
 	// spider engine
-	proc := make(processor.RequestChan, 10000)
+	proc := make(processor.RequestChan, 100)
 	var e = &engine.Engine{
 		Scheduler: &scheduler.QueuedScheduler{},
 		WorkerCount: 10000,
@@ -121,13 +144,15 @@ func pub(reader *bufio.Reader, writer *bufio.Writer, conn net.Conn, e *engine.En
 func sub(writer *bufio.Writer, conn net.Conn, e *engine.Engine)  {
 	for {
 		r := e.Processor.Pop()
-		ret, err := json.Marshal(r)
+		payload, err := json.Marshal(r)
 		if err != nil {
 			log.Printf("marshal err(%s) - %v", conn.RemoteAddr(), err)
 			continue
 		}
-		_, err = writer.Write(int2byte(len(ret)))
-		_, err = writer.Write(ret)
+		b := make([]byte, 2)
+		binary.BigEndian.PutUint16(b, uint16(len(payload)))
+		_, err = writer.Write(b)
+		_, err = writer.Write(payload)
 		_ = writer.Flush()
 		if err != nil {
 			log.Printf("SUB write conn err(%s) - %s", conn.RemoteAddr(), err)
@@ -136,15 +161,4 @@ func sub(writer *bufio.Writer, conn net.Conn, e *engine.Engine)  {
 			return
 		}
 	}
-}
-
-func int2byte(data int)(ret []byte){
-	var len = unsafe.Sizeof(data)
-	ret = make([]byte, len)
-	var tmp = 0xff
-	var index uint = 0
-	for index=0; index<uint(len); index++{
-		ret[index] = byte((tmp<<(index*8) & data)>>(index*8))
-	}
-	return ret
 }
