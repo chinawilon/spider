@@ -26,11 +26,11 @@ func (rc RequestChan) Pop() engine.Response {
 }
 
 // Prevent having too many files open at the same time
-var rateLimited = time.Tick(1 * time.Millisecond)
+// var rateLimited = time.Tick(1 * time.Millisecond)
 
 func (rc RequestChan) Work(r engine.Request){
 
-	<- rateLimited
+	// <- rateLimited
 
 	rp := engine.Response{
 		UID: r.UID,
@@ -67,5 +67,6 @@ func (rc RequestChan) Work(r engine.Request){
 	rp.Body = body
 	rp.StatusCode = response.StatusCode
 	rc.Push(rp)
+
 }
 
