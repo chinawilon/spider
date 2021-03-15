@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -68,7 +69,7 @@ func handle(conn net.Conn, e *engine.Engine)  {
 	writer := bufio.NewWriterSize(conn, defaultBufferSize)
 
 	typ := make([]byte, 3)
-	_, err := reader.Read(typ)
+	_, err := io.ReadFull(reader, typ)
 	if err != nil {
 		_, _ = writer.WriteString("Forbidden.")
 		_ = writer.Flush()
@@ -95,7 +96,7 @@ func shutdown(writer *bufio.Writer, conn net.Conn)  {
 func pub(reader *bufio.Reader, writer *bufio.Writer, conn net.Conn, e *engine.Engine) {
 	for {
 		length := make([]byte, 2)
-		_, err := reader.Read(length)
+		_, err := io.ReadFull(reader, length)
 		if err != nil {
 			log.Printf("read conn err(%s) - %s", conn.RemoteAddr(), err)
 			shutdown(writer, conn)
@@ -103,7 +104,7 @@ func pub(reader *bufio.Reader, writer *bufio.Writer, conn net.Conn, e *engine.En
 		}
 		dataLen := binary.BigEndian.Uint16(length)
 		data := make([]byte, dataLen)
-		n, err := reader.Read(data)
+		n, err := io.ReadFull(reader, data)
 		if err != nil || n != int(dataLen) {
 			log.Printf("payload length(%d) expect(%d)", n, dataLen)
 			shutdown(writer, conn)
