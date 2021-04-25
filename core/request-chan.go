@@ -1,16 +1,15 @@
-package processor
+package core
 
 import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
-	"spider/core/engine"
 	"time"
 )
 
-type RequestChan chan engine.Response
+type RequestChan chan Response
 
-func (rc RequestChan) Push(response engine.Response)  {
+func (rc RequestChan) Push(response Response)  {
 	for {
 		select {
 		case rc <- response:
@@ -21,18 +20,18 @@ func (rc RequestChan) Push(response engine.Response)  {
 	}
 }
 
-func (rc RequestChan) Pop() engine.Response {
+func (rc RequestChan) Pop() Response {
 	return <- rc
 }
 
 // Prevent having too many files open at the same time
 // var rateLimited = time.Tick(1 * time.Millisecond)
 
-func (rc RequestChan) Work(r engine.Request){
+func (rc RequestChan) Work(r Request){
 
 	// <- rateLimited
 
-	rp := engine.Response{
+	rp := Response{
 		UID: r.UID,
 	}
 
