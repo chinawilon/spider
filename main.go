@@ -15,8 +15,12 @@ func main()  {
 	// Core Service
 	s := core.Service{
 		Engine: e,
-		Protocol: &core.V1{
-			Engine: e,
+		Server: &core.Server{
+			Host: "0.0.0.0",
+			Port: 8080,
+			Protocol: &core.V1{
+				Engine: e,
+			},
 		},
 	}
 	s.Run()

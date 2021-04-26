@@ -39,9 +39,9 @@ func (p *V1) Run()  {
 	}
 	log.Printf("handle type : %v", string(typ))
 	switch string(typ) {
-	case "PUB":
+	case "PUB ":
 		p.Pub()
-	case "SUB":
+	case "SUB ":
 		p.Sub()
 	default:
 		p.Shutdown()
@@ -59,11 +59,14 @@ func (p *V1) Pub() {
 		length := make([]byte, 4)
 		_, err := io.ReadFull(p.Reader, length)
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			log.Printf("read conn err(%s) - %s", p.Conn.RemoteAddr(), err)
 			p.Shutdown()
 			return
 		}
-		dataLen := binary.BigEndian.Uint16(length)
+		dataLen := binary.BigEndian.Uint32(length)
 		data := make([]byte, dataLen)
 		n, err := io.ReadFull(p.Reader, data)
 		if err != nil || n != int(dataLen) {
@@ -100,7 +103,7 @@ func (p *V1) Sub()  {
 			continue
 		}
 		b := make([]byte, 4)
-		binary.BigEndian.PutUint16(b, uint16(len(payload)))
+		binary.BigEndian.PutUint32(b, uint32(len(payload)))
 		_, err = p.Writer.Write(b)
 		_, err = p.Writer.Write(payload)
 		_ = p.Writer.Flush()

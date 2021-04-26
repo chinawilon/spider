@@ -22,7 +22,6 @@ type ReadyNotifier interface {
 	WorkerReady(chan Request)
 }
 
-
 type Engineer interface {
 	Run()
 	Pop() Response
